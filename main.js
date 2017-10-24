@@ -1,12 +1,22 @@
-const { app, shell, ipcMain, BrowserWindow } = require("electron");
+const electron = require('electron');
+const {
+  app,
+  shell,
+  ipcMain,
+  BrowserWindow
+} = electron;
 
 let win;
 
 function createWindow() {
   // Create the browser window.
+  const electronScreen = electron.screen;
+  const size = electronScreen.getPrimaryDisplay().workAreaSize;
+
   win = new BrowserWindow({
-    width: 800,
-    height: 600
+    width: size.width,
+    height: size.height,
+    frame:false
   });
   win.hide();
   // and load the index.html of the app.
@@ -27,6 +37,7 @@ function createWindow() {
     //console.log(arg); // prints "ping"
     win.show();
     //console.dir(arg);
+   
     event.sender.send("reply", arg);
   });
 }

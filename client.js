@@ -145,7 +145,7 @@ let camera;
 
 function init() {
   renderer = new THREE.WebGLRenderer();
-  renderer.setSize(800, 640);
+  renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
