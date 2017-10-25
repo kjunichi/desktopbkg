@@ -128,11 +128,15 @@ function updateTexture(cs) {
     });
 
   const mesh = new THREE.Mesh(geometry, material);
+  
+  mesh.scale.x = mesh.scale.x * 10;
+  mesh.scale.y = mesh.scale.y *10;
+  mesh.scale.x = mesh.scale.x * window.innerWidth / window.innerHeight;
   scene.add(mesh);
   renderer.render(scene, camera);
 
   function f() {
-    mesh.rotation.y -= 0.01;
+    //mesh.rotation.y -= 0.01;
     renderer.render(scene, camera);
     requestAnimationFrame(f);
   }
@@ -147,22 +151,23 @@ function init() {
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-
+  console.log(window.innerWidth, window.innerHeight);
+  
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(
     35, // Field of view
-    800 / 640, // Aspect ratio
+    window.innerWidth / window.innerHeight, // Aspect ratio
     0.1, // Near
     10000 // Far
   );
-  camera.position.set(0, 0, 20);
+  camera.position.set(0, 0, 240);
   camera.lookAt(scene.position);
 
 
 
-  var light = new THREE.PointLight(0xFFFFFF);
-  light.position.set(10, 0, 10);
+  var light = new THREE.DirectionalLight(0xFFFFFF);
+  light.position.set(0, 0, 10);
   scene.add(light);
 
   renderer.setClearColor(0xdddddd, 1);
