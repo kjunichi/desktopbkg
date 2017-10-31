@@ -4,37 +4,49 @@ const {
   desktopCapturer,
   ipcRenderer
 } = require('electron');
-const winctl = require('winctl');
+const {
+  Iconv
+} = require('iconv');
+const jconv = require('jconv');
 
+const ref = require('ref');
+const ffi = require('ffi');
+const Struct = require('ref-struct');
+const wchar_t = require('ref-wchar');
+
+const wchar_string = wchar_t.string;
+const voidPtr = ref.refType(ref.types.void);
+
+const rectStruct = Struct({
+  left: ffi.types.ulong,
+  top: ffi.types.ulong,
+  right: ffi.types.ulong,
+  bottom: ffi.types.ulong
+});
+const rectPtr = ref.refType(rectStruct);
+const user32 = ffi.Library('user32.dll', {
+  EnumWindows: ['bool', [voidPtr, 'int32']],
+  IsWindowVisible: ['bool', ['long']],
+  IsIconic: ['bool', ['long']],
+  FindWindowW: ['long', [wchar_string, wchar_string]],
+  GetWindowRect: ['bool', ['long', rectPtr]],
+  GetWindowTextW: ['long', ['long', wchar_string, 'long']]
+});
+
+function getDimensions(title) {
+  console.log(`title = ${title}`);
+  const convutf16 = new Iconv('UTF-8', 'UTF-16LE');
+  const wtitle = convutf16.convert(title);
+  const hwnd = user32.FindWindowW(null, wtitle);
+  const dim = new rectStruct();
+  const ret = user32.GetWindowRect(hwnd, dim.ref());
+  console.log(JSON.stringify(dim), dim);
+}
 let gWinNum = 0;
 let gCanvas;
-desktopCapturer.getSources({
-  types: ['window', 'screen']
-}, (error, sources) => {
-  if (error) throw error;
-  for (var i = 0; i < sources.length; ++i) {
-    console.log('sources[i].name = ' + sources[i].name);
-    addImage(sources[i].thumbnail);
-    if (sources[i].name == 'Entire screen') {
-      navigator.mediaDevices
-        .getUserMedia({
-          audio: false,
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: sources[i].id,
-              minWidth: 1280,
-              maxWidth: 3000,
-              minHeight: 720,
-              maxHeight: 2000
-            }
-          }
-        })
-        .then(stream => gotStream(stream))
-        .catch(e => handleError(e));
-    }
-  }
-});
+const winVideo = [];
+
+
 
 function handleError(e) {
   console.log(e);
@@ -44,6 +56,54 @@ function addImage(image) {
   const elm = document.createElement('img');
   elm.src = image.toDataURL();
   document.body.appendChild(elm);
+}
+let gx = 0;
+
+function gotWinStream(title) {
+  return function (stream) {
+    if (title === "NVIDIA GeForce Overlay") {
+      return;
+    }
+    getDimensions(title);
+    const ve = document.createElement('video');
+    ve.srcObject = stream;
+    const obj = {};
+    obj.video = ve;
+    obj.title = title;
+
+    const cs2 = document.createElement('canvas');
+    cs2.width = 1024;
+    cs2.height = 1024;
+    const ctx = cs2.getContext('2d');
+    ctx.drawImage(ve, 0, 0, cs2.width, cs2.height);
+    const texture = new THREE.Texture(
+      ve, THREE.UVMapping, THREE.ClampToEdgeWrapping,
+      THREE.ClampToEdgeWrapping);
+    texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    const geometry = new THREE.PlaneGeometry(8, 8, 1);
+    const material =
+      new THREE.MeshLambertMaterial({
+        color: 0xFFFFFF,
+        map: texture
+      });
+
+    const mesh = new THREE.Mesh(geometry, material);
+
+    mesh.scale.x = mesh.scale.x * 10;
+    mesh.scale.y = mesh.scale.y * 10;
+    mesh.scale.x = mesh.scale.x * window.innerWidth / window.innerHeight;
+    mesh.position.z = 10;
+    mesh.position.x = mesh.position.x + gx;
+    gx += 10;
+    scene.add(mesh);
+    obj.texture = texture;
+    winVideo.push(obj);
+    console.log("winvideo texture");
+  }
 }
 
 function gotStream(stream) {
@@ -66,7 +126,6 @@ function gotStream(stream) {
       ipcRenderer.on('reply', (e, a) => {
         const data = JSON.parse(a);
         console.log(data.img.length);
-        console.log(data.len);
         const img = ctx.createImageData(cs.width, cs.height);
         //
         let l = data.img.length / 4;
@@ -140,6 +199,10 @@ function updateTexture(cs) {
   function f() {
     //mesh.rotation.y -= 0.01;
     renderer.render(scene, camera);
+    for (let i = 0; i < winVideo.length; i++) {
+      //console.log(`winVideo[${i}] = ${winVideo[i].title}`);
+      winVideo[i].texture.needsUpdate = true;
+    }
     requestAnimationFrame(f);
   }
   f();
@@ -182,12 +245,50 @@ window.addEventListener('load', () => {
   init();
   gopheronMain();
   // Iterate over all windows with a custom filter -> show all visible windows
-  winctl.FindWindows(win => win.isVisible() && win.getTitle()).then(windows => {
-    console.log("Visible windows:");
-    windows.sort((a, b) => a.getTitle().localeCompare(b.getTitle())).forEach(window => {
-      console.log(" - %s [classname=%s, pid=%d, hwnd=%d, parent=%d]", window.getTitle(), window.getClassName(), window.getPid(), window.getHwnd(), window.getParent());
-      console.log("window.dim = ", window.dimensions())
-    });
+  desktopCapturer.getSources({
+    types: ['window', 'screen']
+  }, (error, sources) => {
+    if (error) throw error;
+    for (let i = 0; i < sources.length; ++i) {
+      console.log(`sources[${i}].name = ${sources[i].name}`);
+      addImage(sources[i].thumbnail);
+      if (sources[i].name == 'Entire screen') {
+        console.dir(sources[i]);
+        navigator.mediaDevices
+          .getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: sources[i].id,
+                minWidth: 1280,
+                maxWidth: 3000,
+                minHeight: 720,
+                maxHeight: 2000
+              }
+            }
+          })
+          .then(stream => gotStream(stream))
+          .catch(e => handleError(e));
+      } else {
+        navigator.mediaDevices
+          .getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: sources[i].id,
+                minWidth: 1280,
+                maxWidth: 3000,
+                minHeight: 720,
+                maxHeight: 2000
+              }
+            }
+          })
+          .then(gotWinStream(sources[i].name))
+          .catch(e => handleError(e));
+      }
+    }
   });
 });
 

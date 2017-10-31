@@ -14,8 +14,13 @@
     "electron-rebuild": "^1.6.0"
   },
   "dependencies": {
+    "ffi": "^2.2.0",
+    "iconv": "^2.3.0",
+    "jconv": "^0.1.5",
+    "jscs": "^3.0.7",
     "nan": "^2.7.0",
-    "three": "^0.87.1",
-    "winctl": "^1.0.2"
+    "ref-struct": "^1.1.0",
+    "ref-wchar": "^1.0.2",
+    "three": "^0.87.1"
   }
 }
