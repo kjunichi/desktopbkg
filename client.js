@@ -41,6 +41,8 @@ function getDimensions(title) {
   const dim = new rectStruct();
   const ret = user32.GetWindowRect(hwnd, dim.ref());
   console.log(JSON.stringify(dim), dim);
+
+  return dim;
 }
 let gWinNum = 0;
 let gCanvas;
@@ -64,16 +66,16 @@ function gotWinStream(title) {
     if (title === "NVIDIA GeForce Overlay") {
       return;
     }
-    getDimensions(title);
     const ve = document.createElement('video');
     ve.srcObject = stream;
     const obj = {};
     obj.video = ve;
     obj.title = title;
-
+    const dim = getDimensions(title);
+    obj.dim=dim;
     const cs2 = document.createElement('canvas');
-    cs2.width = 1024;
-    cs2.height = 1024;
+    cs2.width = dim.right - dim.left;
+    cs2.height = dim.bottom - dim.top;
     const ctx = cs2.getContext('2d');
     ctx.drawImage(ve, 0, 0, cs2.width, cs2.height);
     const texture = new THREE.Texture(
@@ -83,8 +85,10 @@ function gotWinStream(title) {
     texture.generateMipmaps = false;
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
-
-    const geometry = new THREE.PlaneGeometry(8, 8, 1);
+    console.log("dim.right-dim.left",(dim.right-dim.left),title);
+    console.log("dim.bottom-dim.top",(dim.bottom-dim.top),title);
+    const geometry = new THREE.PlaneGeometry((dim.right-dim.left), 
+    (dim.bottom-dim.top), 1);
     const material =
       new THREE.MeshLambertMaterial({
         color: 0xFFFFFF,
@@ -93,11 +97,13 @@ function gotWinStream(title) {
 
     const mesh = new THREE.Mesh(geometry, material);
 
-    mesh.scale.x = mesh.scale.x * 10;
-    mesh.scale.y = mesh.scale.y * 10;
-    mesh.scale.x = mesh.scale.x * window.innerWidth / window.innerHeight;
+    mesh.scale.x = 0.171;
+    mesh.scale.y = 0.171;
+    //mesh.scale.x = mesh.scale.x * window.innerWidth / window.innerHeight;
     mesh.position.z = 10;
-    mesh.position.x = mesh.position.x + gx;
+    mesh.position.x = (((dim.left+dim.right)/2)-(1680/2))*mesh.scale.x;
+    mesh.position.y = ((1010/2) - ((dim.top+dim.bottom)/2))*mesh.scale.y;
+    console.log(mesh.position.x,mesh.position.y);
     gx += 10;
     scene.add(mesh);
     obj.texture = texture;
@@ -157,7 +163,6 @@ function gotStream(stream) {
       obj.img = img;
       ipcRenderer.send('asynchronous-message', JSON.stringify(obj));
       ve.pause();
-      // ve.src = "";
     }, 200);
   });
   ve.addEventListener('timeupdate', ev => {
@@ -342,14 +347,14 @@ function gopheronMain() {
   }
 
   function gopher() {
-
+    root.position.z=101;
     root.position.x = -100;
     root.position.y = -50;
     root.rotation.y = -0.8;
 
-    root.scale.x = 0.12;
-    root.scale.y = 0.12;
-    root.scale.z = 0.12;
+    root.scale.x = 0.08;
+    root.scale.y = 0.08;
+    root.scale.z = 0.08;
     let accx = 1;
     let isJumpping = false;
     let accy = 1;
@@ -375,9 +380,9 @@ function gopheronMain() {
         if (root.position.y > 20) {
           accy = -0.7;
         }
-        if (root.position.y < -100) {
+        if (root.position.y < -50) {
           accy = 0.7;
-          root.position.y = -100;
+          root.position.y = -50;
           isJumpping = false;
         }
       } else {
