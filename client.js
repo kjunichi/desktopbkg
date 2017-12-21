@@ -7,7 +7,6 @@ const {
 const {
   Iconv
 } = require('iconv');
-const jconv = require('jconv');
 
 const ref = require('ref');
 const ffi = require('ffi');
@@ -48,8 +47,6 @@ let gWinNum = 0;
 let gCanvas;
 const winVideo = [];
 
-
-
 function handleError(e) {
   console.log(e);
 }
@@ -62,7 +59,7 @@ function addImage(image) {
 let gx = 0;
 
 function gotWinStream(title) {
-  return function (stream) {
+  return  (stream) => {
     if (title === "NVIDIA GeForce Overlay") {
       return;
     }
@@ -72,12 +69,12 @@ function gotWinStream(title) {
     obj.video = ve;
     obj.title = title;
     const dim = getDimensions(title);
-    obj.dim=dim;
+    obj.dim = dim;
     const cs2 = document.createElement('canvas');
     cs2.width = dim.right - dim.left;
     cs2.height = dim.bottom - dim.top;
     const ctx = cs2.getContext('2d');
-    ctx.drawImage(ve, 0, 0, cs2.width, cs2.height);
+    //ctx.drawImage(ve, 0, 0, cs2.width, cs2.height);
     const texture = new THREE.Texture(
       ve, THREE.UVMapping, THREE.ClampToEdgeWrapping,
       THREE.ClampToEdgeWrapping);
@@ -85,10 +82,10 @@ function gotWinStream(title) {
     texture.generateMipmaps = false;
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
-    console.log("dim.right-dim.left",(dim.right-dim.left),title);
-    console.log("dim.bottom-dim.top",(dim.bottom-dim.top),title);
-    const geometry = new THREE.PlaneGeometry((dim.right-dim.left), 
-    (dim.bottom-dim.top), 1);
+    console.log("dim.right-dim.left", (dim.right - dim.left), title);
+    console.log("dim.bottom-dim.top", (dim.bottom - dim.top), title);
+    const geometry = new THREE.PlaneGeometry((dim.right - dim.left),
+      (dim.bottom - dim.top), 1);
     const material =
       new THREE.MeshLambertMaterial({
         color: 0xFFFFFF,
@@ -101,9 +98,9 @@ function gotWinStream(title) {
     mesh.scale.y = 0.171;
     //mesh.scale.x = mesh.scale.x * window.innerWidth / window.innerHeight;
     mesh.position.z = 10;
-    mesh.position.x = (((dim.left+dim.right)/2)-(1680/2))*mesh.scale.x;
-    mesh.position.y = ((1010/2) - ((dim.top+dim.bottom)/2))*mesh.scale.y;
-    console.log(mesh.position.x,mesh.position.y);
+    mesh.position.x = (((dim.left + dim.right) / 2) - (1680 / 2)) * mesh.scale.x;
+    mesh.position.y = ((1010 / 2) - ((dim.top + dim.bottom) / 2)) * mesh.scale.y;
+    console.log(mesh.position.x, mesh.position.y);
     gx += 10;
     scene.add(mesh);
     obj.texture = texture;
@@ -113,7 +110,7 @@ function gotWinStream(title) {
 }
 
 function gotStream(stream) {
-  console.dir(stream);
+  //console.dir(stream);
   const ve = document.createElement('video');
   ve.addEventListener('loadeddata', (ev) => {
     console.dir(ev);
@@ -147,27 +144,26 @@ function gotStream(stream) {
         cs2.height = window.innerHeight;
         const ctx2 = cs2.getContext('2d');
 
-        document.body.appendChild(cs2);
+        //document.body.appendChild(cs2);
         ctx2.putImageData(img, 0, 0);
         gCanvas = cs2;
         updateTexture(cs2);
         console.log(`done`);
       });
       const obj = {};
-      let img = [];
+      //let img = [];
       // obj.len = frame.data.length;
-      for (let i = 0; i < frame.data.length; i++) {
-        img[i] = frame.data[i];
-      }
+      // for (let i = 0; i < frame.data.length; i++) {
+      //   img[i] = frame.data[i];
+      // }
       // obj.len = frame.data.length;
-      obj.img = img;
+      obj.img = frame.data;
       ipcRenderer.send('asynchronous-message', JSON.stringify(obj));
       ve.pause();
     }, 200);
   });
   ve.addEventListener('timeupdate', ev => {
-    console.dir(ev);
-
+    //console.dir(ev);
   });
   ve.srcObject = stream;
 }
@@ -233,8 +229,6 @@ function init() {
   );
   camera.position.set(0, 0, 285);
   camera.lookAt(scene.position);
-
-
 
   var light = new THREE.DirectionalLight(0xFFFFFF);
   light.position.set(0, 0, 10);
@@ -347,7 +341,7 @@ function gopheronMain() {
   }
 
   function gopher() {
-    root.position.z=101;
+    root.position.z = 101;
     root.position.x = -100;
     root.position.y = -50;
     root.rotation.y = -0.8;
@@ -539,5 +533,4 @@ function gopheronMain() {
     createGopher();
   });
   let gopherMove = true;
-
 }
